@@ -1,0 +1,58 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: Creates a lambda function to check which resources have UserDefined Active Cost Allocation Tags
+Parameters:
+  bktName:
+    Type: String
+    Description: Name of the bucket holding the lambda zip (do NOT precede with s3://)
+    Default: cost-alloc-tags-bkt
+  zipName:
+    Type: String
+    Description: Name of the lambda zip file
+    Default: costAllocTagsCheck-afb1746f-6081-4a14-8b58-a034e96bebf4.zip
+Resources:
+  costAllocTagsFunction:
+    Type: AWS::Lambda::Function
+    Properties:
+      Description: Lambda function to check which resources have UserDefined Cost Allocation Tags
+      Handler: lambda_function.lambda_handler
+      Timeout: 10
+      Role:
+        Fn::GetAtt:
+        - lambdaIAMRole
+        - Arn
+      Code:
+        S3Bucket: !Ref bktName
+        S3Key: !Ref zipName
+      Runtime: python3.8
+      Layers:
+        - arn:aws:lambda:us-west-1:007786019690:layer:boto3-1-24:1
+      FunctionName:
+        Fn::Sub: costAllocTagsCheck
+  lambdaIAMRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+        - Action:
+          - sts:AssumeRole
+          Effect: Allow
+          Principal:
+            Service:
+            - lambda.amazonaws.com
+      Policies:
+      - PolicyDocument:
+          Version: 2012-10-17
+          Statement:
+          - Action:
+            - logs:CreateLogGroup
+            - logs:CreateLogStream
+            - logs:PutLogEvents
+            Effect: Allow
+            Resource: '*'
+          - Action:
+            - ce:List*
+            Effect: Allow
+            Resource: '*'
+        PolicyName:
+          Fn::Sub: costAllocTagsCheckPolicy
